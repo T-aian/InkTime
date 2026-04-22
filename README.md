@@ -34,7 +34,6 @@ De asemenea, pachetele fizice (footprints) au fost alese pentru a permite un asa
 | RT6150AWSC        | Convertor DC-DC buck-boost (1.8V–5.5V → 3.3V), curent max 800mA, consum idle 60µA                          | C147971          | [Link JLCPCB](https://www.lcsc.com/product-detail/C147971.html) | [https://www.richtek.com/assets/product_file/RT6150A=RT6150B/DS6150AB-04.pdf](https://www.richtek.com/assets/product_file/RT6150A=RT6150B/DS6150AB-04.pdf)                                                 |
 | KH-TYPE-C-16P     | Conector USB Type-C mamă, 16 pini, SMD, profil redus, 3A                                                   | C709357          | [Link JLCPCB](https://jlcpcb.com/partdetail/KH-TYPE-C-16P/C709357) | N/A                                                                                                                                                                                                        |
 | USBLC6-2SC6       | Protecție ESD (TVS diode array), capacitance 2.5pF pentru linii USB                                        | C7519 / C2827654 | [Link JLCPCB](https://jlcpcb.com/partdetail/STMicroelectronics-USBLC62SC6/C7519) | [https://www.st.com/resource/en/datasheet/usblc6-2.pdf](https://www.st.com/resource/en/datasheet/usblc6-2.pdf)                                                                                             |
-| Molex 503480-2400 | Conector ZIF FPC/FFC 24 pini, pitch 0.5mm, low profile (1.0mm)                                             | C234192          | [Link JLCPCB](https://www.lcsc.com/product-detail/C234192.html) | [https://www.mouser.com/datasheet/2/276/3/5034802400_FFC_FPC_CONNECTORS-2853339.pdf](https://www.mouser.com/datasheet/2/276/3/5034802400_FFC_FPC_CONNECTORS-2853339.pdf)                                   |
 | 2450AT18B100E     | Antenă ceramică RF 2.45 GHz, eficiență ~76%, pachet SMD 1206                                               | C2836414         | [Link JLCPCB](https://jlcpcb.com/partdetail/JohansonTechnology-2450AT18B100/C2836414) | [https://www.johansontechnology.com/docs/1187/2450AT18B100_X8XXogU.pdf](https://www.johansontechnology.com/docs/1187/2450AT18B100_X8XXogU.pdf)                                                             |
 
 ## 4. Descrierea Exhaustivă a Funcționalității Hardware
@@ -63,12 +62,7 @@ Tensiunea de 5V preluată (VBUS) este apoi rutată către circuitul de managemen
 ### Monitorizarea Autonomiei (MAX17048G+T10):
 În mod tradițional, monitorizarea capacității unei baterii implică inserarea unui rezistor tip "shunt" (coulomb counter) pe traseul de retur, ceea ce introduce pierderi resistive constante. InkTime utilizează integratul MAX17048G+T10. Acest fuel-gauge citește exclusiv tensiunea celulei (VCELL) și folosește un model matematic proprietar (ModelGauge™) pentru a estima Starea de Încărcare (State-of-Charge / SOC) cu o toleranță a erorii extrem de redusă, raportând datele către nRF52840 pe magistrala I2C. Prin eliminarea rezistorului de măsurare și o stare internă "Hibernate" în care consumă doar 3 µA, se economisește spațiu vital pe PCB și energie prețioasă.
 
-### 4.3. Subsistemul de Afișare (Display Controller ST7789)
-
-Interfața vizuală constituie cel mai solicitant mediu de comunicare din cadrul dispozitivului. Un ecran tipic LCD IPS de mici dimensiuni este comandat prin intermediul integratului ST7789, un driver larg susținut în mediul sistemelor de operare open source pentru embedded (ex: ecosistemul Zephyr Project). Conectivitatea mecanică între ecran (care va fi asamblat în carcasă superioară) și placa de bază (PCB) de grosime 1.0mm se efectuează cu ajutorul unui cablu flexibil plat (FPC). S-a optat pentru utilizarea conectorului Molex 503480-2400. Acest conector ZIF cu 24 de poziții are un pas ultra-fin (pitch) de 0.5mm și cel mai important, o înălțime de la placa de circuit de numai 1.0mm, respectând constrângerile mecanice riguroase pe axa Z din interiorul carcasei. Dispunând de contacte pe ambele planuri (dual contact), facilitează rutarea fără constrângeri privind orientarea benzii flexibile a display-ului.
-Afișajul comunică cu nRF52840 prin protocol SPI, necesitând lățimi de bandă substanțiale pentru a randa o grafică fluidă la rezoluția tipică (ex: 240x240 pixeli cu 16 biți adâncime de culoare). O viteză de tact SPI de cel puțin 8 MHz este crucială pentru a preveni fragmentarea imaginilor (tearing effect).
-
-### 4.4. Modulul Senzorial (Accelerometrul BMA423)
+### 4.3. Modulul Senzorial (Accelerometrul BMA423)
 Pentru monitorizarea cinematică a purtătorului s-a implementat accelerometrul MEMS digital BMA423, proiectat de Bosch Sensortec. Acest senzor din clasa senzorilor "inteligenți" a fost creat special pentru industria wearable. În locul eșantionării constante și transferării a mii de pachete de date brute (Raw Acceleration Data) pe magistrala I2C către MCU – proces ce ar drena rapid bateria – BMA423 dispune de logică procesuală internă.
 Funcția sa nativă de pedometru (Step Counter) analizează algoritmic tiparele de accelerație și numără pașii independent, menținând un consum total de putere redus până la pragul de 13 µA – 25 µA. Informația este stocată într-un buffer intern (FIFO de 1 kByte) de unde poate fi interogată ocazional de MCU. Suplimentar, funcțiile hardware de recunoaștere a mișcării identifică acțiunile de ridicare a brațului spre ochi ("Tilt-on-Wrist") sau bătăi ("Tap/Double Tap") și emit un impuls asincron pe un pin de întrerupere dedicat (INT), ordonând procesorului nRF52840 să iasă din modul System OFF/ON Sleep.
 
@@ -88,8 +82,53 @@ Mai jos prezentăm un calcul teoretic detaliat al consumului, divizat în cele d
 
 ### 6.1. Consumul în Modul de Repaus (System Sleep State)
 
-Un smartwatch își petrece covârșitor de mult timp (cca. 90-95%) cu ecranul oprit, procesând strict algoritmi secvențiali minori și menținând conectivitatea Bluetooth de bază (Advertising). Această stare, numită System_ON_Sleep pentru arhitectura nRF52840, păstrează memoria RAM alimentată și rulează ceasul de timp real (RTC).ComponentăConsum Tipic de RepausCondiție de Operare / JustificarenRF52840 SoC~1.5 µASystem ON mode, Wake-on-RTC, menținere parțială a RAM-ului activ. CPU în starea WFI (Wait For Interrupt).nRF52840 Radio BLE~3.8 µACurent mediu integrat pentru evenimente recurente scurte (pulsuri) de BLE Advertising (la interval de 10 secunde).BMA423 Senzor Accel.13.0 µAÎn modul "Low-Power", senzorul eșantionează frecvențe reduse (ex. 50 Hz). Logică de detecție hardware (Step Counter & Tilt-on-wrist) continuă să opereze neîncetat.MAX17048 Fuel Gauge3.0 µAAflat în "Hibernate Mode". ADC-ul este activat rar pentru a evalua căderea naturală a tensiunii, restul circuitelor de analiză fiind oprite.DRV2605 Driver Haptic1.75 µAStarea de Standby complet (Shutdown Current). Logică I2C latentă.BQ25121A Încărcător0.7 µA (700 nA)Curentul de scurgere (Leakage/Quiescent) generat când mufa USB este deconectată și circuitul intern monitorizează tensiunea de VBAT.RT6150AWSC DC-DC60.0 µACurentul quiescent nativ al etajului Buck-Boost, necesar pentru susținerea comutației minime pe linia logică de 3.3V (Power Save Mode).Curenți Reziduali (PCB)~10.0 µAPierderi minore provocate de curentul de scurgere al condensatoarelor ceramice (Dielectric Leakage) și rezistențelor de pull-up I2C.TOTAL SLEEP BUDGET~93.75 µA (0.093 mA)Un consum consolidat care confirmă performanța uimitoare a sistemelor electronice moderne miniaturale.
+Un smartwatch își petrece majoritatea timpului (~90–95%) în stare de repaus, cu ecranul oprit. În acest mod:
 
-### 6.2. Consumul în Modul Activ (Peak Load State)
+- sistemul rulează în System ON Sleep (specific nRF52840)
+- RAM-ul rămâne alimentat
+- RTC-ul este activ
+- BLE funcționează în mod Advertising periodic
 
-În scenariul în care utilizatorul privește ecranul, se transferă volume mari de date prin Bluetooth, iar motorul de vibrații este acționat, curentul prezintă vârfuri substanțiale.ComponentăConsum Peak (Vârf)Condiție de Operare / JustificareST7789 Display (LCD + LED) ~20.0 mA - 25.0 mAConsumul major este dominat exponențial de funcția BACKLIGHT. Aprinderea matricei LED la un nivel MID-HIGH va irosi curent imens sub formă luminoasă. Logica de control a panoului IPS contribuie suplimentar.nRF52840 (CPU + Radio)4.8 mA - 15.0 mATransmiterea BLE continuă (0 dBm TX power) absoarbe ~4.8 mA. Trecerea datelor video prin interfața SPI adaugă o sarcină de procesare pe CPU care generează spike-uri adiționale de până la 15 mA.BMA423 Senzor Accel.150 µA (0.15 mA)Operare continuă (Full Data Polling) de înaltă rezoluție (ex. recunoaștere complexă a gesturilor).DRV2605 + Motor LRA/ERM60.0 mA - 80.0 mAConsum tranzitoriu de mare amploare necesar demarării rotorului excentric sau punerii în vibrație a masei rezonante.TOTAL ACTIVE BUDGET~85.0 mA - 120.0 mA(Valorile sunt dependente direct de tipul efectelor Haptic cerute și intensitatea Backlight-ului).Notă privind eficiența: Sursa RT6150 convertor DC-DC suferă o penalizare de eficiență energetică la conversia de tensiune (uzual eficiență ~90%). Prin urmare, extragerea a 100mA la nivelul liniilor de 3.3V va "trage" aproximativ 110mA-115mA de la celula bateriei Li-Po.
+Consum:
+| Componentă     | Consum tipic | Condiție / Justificare                                        |
+| -------------- | ------------ | ------------------------------------------------------------- |
+| nRF52840 SoC   | ~1.5 µA      | System ON, CPU în WFI (Wait For Interrupt), RTC activ         |
+| Radio BLE      | ~3.8 µA      | Advertising periodic (interval ~10s)                          |
+| BMA423         | ~13.0 µA     | Low-power mode, sampling redus (~50 Hz), step detection activ |
+| MAX17048       | ~3.0 µA      | Hibernate mode, măsurători rare                               |
+| DRV2605        | ~1.75 µA     | Standby complet (shutdown)                                    |
+| BQ25121A       | ~0.7 µA      | Leakage cu USB deconectat                                     |
+| RT6150AWSC     | ~60.0 µA     | Quiescent current (DC-DC activ în Power Save Mode)            |
+| PCB (rezidual) | ~10.0 µA     | Leakage pasive + pull-up-uri I2C                              |
+
+**Consum total:** 
+`TOTAL SLEEP ≈ 93.75 µA (0.093 mA)`
+
+### 6.2. Consumul în Mod Activ (Peak Load State)
+
+În modul activ (utilizatorul interacționează cu ceasul):
+- display-ul este aprins
+- BLE transmite date
+- motorul haptic poate fi activ
+
+| Componentă           | Consum Peak  | Condiție / Justificare                     |
+| -------------------- | ------------ | ------------------------------------------ |
+| Display e-ink      | ~5 – 15 mA (peak) | Doar în timpul refresh-ului (~200–500 ms). Consum ≈ 0 între refresh-uri |
+| nRF52840 (CPU + BLE) | ~4.8 – 15 mA | TX BLE + procesare SPI pentru display      |
+| BMA423               | ~0.15 mA     | High-performance mode (gesturi complexe)   |
+| DRV2605 + motor      | ~60 – 80 mA  | Vibrație activă (ERM/LRA startup)          |
+
+**Consum total:** 
+`TOTAL ACTIVE ≈ 10 – 90 mA`
+
+### 6.3 Durată de viață Estimativă
+
+Pe baza bugetelor de consum estimate, autonomia sistemului poate fi aproximată considerând un scenariu realist de utilizare: ~95% din timp în modul sleep (~0.093 mA) și ~5% în modul activ (~50 mA mediu). Curentul mediu rezultat este:
+
+`I_med ≈ 0.95 × 0.093 mA + 0.05 × 50 mA ≈ 2.58 mA`
+
+Pentru o baterie Li-Po de 200 mAh, rezultă o durată de funcționare de aproximativ:
+
+`T ≈ 200 mAh / 5.1 mA ≈ 77 ore (~3-4 zile)`
+
+În practică, ținând cont de pierderile din conversia de tensiune (eficiența ~90% a regulatorului) și variațiile de utilizare (ex.vibrații frecvente), autonomia reală va fi în intervalul 4-5 zile, ceea ce este tipic pentru un smartwatch cu e-ink și funcții BLE active.
